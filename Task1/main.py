@@ -1,5 +1,6 @@
 from fastapi import FastAPI, status
 from utils.constants import Endpoints, ResponseMessages
+from v1.users.UserEndPoints import UserRouter
 import uvicorn 
 
 
@@ -12,6 +13,7 @@ voting_app = FastAPI(
     redoc_url="/redoc",
 )
 
+voting_app.include_router(UserRouter)
 
 @voting_app.get(Endpoints.ROOT)
 def read_root():
