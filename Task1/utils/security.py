@@ -5,6 +5,7 @@ from v1.users.UserDBModels import get_user_by_email
 from config import Settings
 from fastapi import Depends, HTTPException
 from fastapi.security.oauth2 import OAuth2PasswordBearer
+from datetime import datetime, timedelta, timezone
 
 settings = Settings()
 
@@ -30,10 +31,13 @@ def verify_password(plain_password: SecretStr, hashed_password: str) -> bool:
 
 def create_access_token(data: dict) -> str: 
     """
-    Create a JWT token with an expiration time.
+    Create a JWT token with an expiration time of 1 minute.
     """ 
+    data_to_encode = data.copy() 
+    expire_time = datetime.utcnow() + timedelta(seconds=settings.JWT_EXPIRATION_TIME)
+    data_to_encode.update({"exp": expire_time})
     encoded_jwt = jwt.encode(
-        data,
+        data_to_encode,
         settings.JWT_SECRET_KEY.get_secret_value(),
         algorithm=settings.JWT_ALGORITHM
     )
@@ -56,9 +60,9 @@ def decode_access_token(token: str = Depends(oauth2_scheme)) -> dict:
         if payload is {}:
             raise JWTError
         user = get_user_by_email(payload["email"])  
-        if user is None:    
+        if not user:    
             raise HTTPException(status_code=401, detail="Could not validate credentials")
 
-        return payload
+        return payload    
     except JWTError as e:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
