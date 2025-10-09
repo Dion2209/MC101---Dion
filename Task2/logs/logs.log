@@ -1,0 +1,3 @@
+I am changing something here2025-10-09 21:08:48,541 - INFO - User router included in the main app
+2025-10-09 21:08:48,542 - INFO - Health check endpoint is set up
+2025-10-09 21:08:48,542 - INFO - Application setup complete. Going to start the server.
