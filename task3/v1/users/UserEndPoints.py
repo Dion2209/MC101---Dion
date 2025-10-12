@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, Request, Depends
+from fastapi import APIRouter, HTTPException, Header, status, Request, Depends
 from sqlalchemy import func
+from config import Settings
 from utils.constants import Endpoints, ResponseMessages
 from .UserSchemas import UserSchema, UserLoginSchema, UserRegisterResonseSchema, VoteCountResponseSchema, VotingSchema
 #from .UserDBModels import UserDBModel, get_user_by_email, add_user, UserDB
@@ -9,6 +10,13 @@ from db.DBConfig import get_db
 
 UserRouter = APIRouter(prefix="/users", tags=["Users"])
 
+settings = Settings()
+
+
+def admin_auth(admin_token: str = Header(..., alias="admin_token")): # Uses the header for the admin auth token
+    if admin_token != settings.ADMIN_TOKEN.get_secret_value():
+        raise HTTPException(status_code=401, detail="Invalid or missing admin token")
+
 
 @UserRouter.post(Endpoints.REGISTER, status_code=status.HTTP_201_CREATED, response_model=UserRegisterResonseSchema) #Post method
 def create_user(user : UserSchema, db=Depends(get_db)): 
@@ -17,14 +25,6 @@ def create_user(user : UserSchema, db=Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ResponseMessages.USER_ALREADY_EXISTS)
     #Add user to the DB
-    """    
-    new_user = add_user(UserDBModel(
-        name = user.name,
-        email = user.email,
-        hashed_password=hash_password(user.password),
-        is_active=user.is_active) 
-    )
-    """
 
     new_user = UserDBModel(**user.model_dump(exclude={"password"}),hashed_password=hash_password(user.password))
 
@@ -38,12 +38,6 @@ def create_user(user : UserSchema, db=Depends(get_db)):
     db.refresh(new_user)
 
     return new_user
-
-"""
-from dotenv import load_dotenv
-secrets = load_dotenv(".env")
-secrets["JWT_SECRET_KEY"] = "your_jwt_secret_key"
-"""
 
 
 # Login Endpoint
@@ -99,7 +93,7 @@ from .UserSchemas import CandidateSchema
 AdminRouter = APIRouter(prefix="/admin", tags=["Admin"])
 
 # Add candidates to db
-@AdminRouter.post(Endpoints.CANDIDATE, status_code=status.HTTP_201_CREATED)
+@AdminRouter.post(Endpoints.CANDIDATE, status_code=status.HTTP_201_CREATED, dependencies=[Depends(admin_auth)])
 def add_candidate(new_candidate: CandidateSchema, db=Depends(get_db)):
     candidate = CandidateDBModel(**new_candidate.model_dump())
     try:
@@ -111,13 +105,13 @@ def add_candidate(new_candidate: CandidateSchema, db=Depends(get_db)):
     db.refresh(candidate)
     return candidate
 
-@AdminRouter.get(Endpoints.CANDIDATE)
+@AdminRouter.get(Endpoints.CANDIDATE, dependencies=[Depends(admin_auth)])
 def get_candidates(db=Depends(get_db)):
     candidates = db.query(CandidateDBModel).all()
     return candidates
 
 
-@AdminRouter.get("/votes/all-candidates/count")
+@AdminRouter.get("/votes/all-candidates/count", dependencies=[Depends(admin_auth)])
 def get_vote_counts(db=Depends(get_db)):
     results = db.query(VoteDBModel.candidate_id, CandidateDBModel.name, func.count(VoteDBModel.id)).join(
         CandidateDBModel, 
@@ -158,3 +152,12 @@ def vote_candidate(candidate: VotingSchema, user = Depends(decode_access_token),
 
 
 
+# Delete candidate
+@AdminRouter.delete(Endpoints.CANDIDATE, dependencies=[Depends(admin_auth)])
+def delete_candidate(candidate_name: str, db=Depends(get_db)):
+    candidate = db.query(CandidateDBModel).filter(CandidateDBModel.name == candidate_name).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    db.delete(candidate)
+    db.commit()
+    return {"message": f"Candidate '{candidate_name}' deleted successfully"}

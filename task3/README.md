@@ -27,3 +27,13 @@ How to run the app:
 
     3. What command stops the app from using Composer?:
 	docker compose -f docker-composer.yml down
+
+
+
+For the AdminRouter:
+
+    In the headers, write:
+    Key:                Value:
+    admin_token         supersecrettoken
+    Content-Type        application/json
+

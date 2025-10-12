@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_PORT: int
     POSTGRES_HOST: str
+    ADMIN_TOKEN: SecretStr
 
 
     class Config:
