@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  voting_app:
+    depends_on:
+      - "${POSTGRES_HOST}"
+    build:
+      context: .
+      dockerfile: Dockerfile  
+    container_name: voting_app_container
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    command: uvicorn main:voting_app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./:/app:ro
+      - logger_volume:/app/logs
+
+  #Making a postgres database service
+  voting_db:
+    image: postgres:15
+    container_name: voting_db
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  logger_volume:
+  db_data:
