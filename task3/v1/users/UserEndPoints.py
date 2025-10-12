@@ -67,27 +67,23 @@ def get_user_info(token = Depends(decode_access_token)):
     return{"message": "User info endpoint"}
 
 
-"""
-@UserRouter.delete(Endpoints.DELETE, status_code=status.HTTP_200_OK)
-def delete_user(token_data: dict = Depends(decode_access_token)):
-    email = token_data.get("email")
-    user = get_user_by_email(email)
+@UserRouter.delete("/delete", status_code=status.HTTP_200_OK)
+def delete_user(token_data: dict = Depends(decode_access_token), db=Depends(get_db)):
+    """
+    Delete the user who is authenticated by their own JWT token.
+    """
+    user_id = token_data.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user = db.query(UserDBModel).filter(UserDBModel.id == int(user_id)).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ResponseMessages.USER_NOT_FOUND)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    # Fjern brukeren fra "databasen"
-    user_id_to_delete = None
-    for user_id, u in list(UserDB.items()):
-        if u.email == email:
-            user_id_to_delete = user_id
-            break
+    db.delete(user)
+    db.commit()
 
-    if user_id_to_delete:
-        del UserDB[user_id_to_delete]
-        return {"message": ResponseMessages.DELETE_SUCCESS, "status": status.HTTP_200_OK}
-    else:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ResponseMessages.USER_NOT_FOUND)
-"""
+    return {"message": "User deleted successfully"}
 
 from .UserSchemas import CandidateSchema
 AdminRouter = APIRouter(prefix="/admin", tags=["Admin"])
