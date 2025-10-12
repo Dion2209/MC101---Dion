@@ -178,3 +178,15 @@ def get_candidate_vote_count(candidate_id: int = Path(..., description="ID of th
         candidate_name=candidate.name,
         vote_count=vote_count
     )
+
+
+@AdminRouter.put("/candidate/{candidate_id}", dependencies=[Depends(admin_auth)]) #Change name and party on candidate
+def update_candidate(candidate_id: int, updated_candidate: CandidateSchema, db=Depends(get_db)):
+    candidate = db.query(CandidateDBModel).filter(CandidateDBModel.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    candidate.name = updated_candidate.name
+    candidate.party = updated_candidate.party
+    db.commit()
+    db.refresh(candidate)
+    return candidate
