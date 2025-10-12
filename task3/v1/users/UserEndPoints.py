@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Request, Depends
 from sqlalchemy import func
 from utils.constants import Endpoints, ResponseMessages
-from .UserSchemas import UserSchema, UserLoginSchema, UserRegisterResonseSchema, VotingSchema
+from .UserSchemas import UserSchema, UserLoginSchema, UserRegisterResonseSchema, VoteCountResponseSchema, VotingSchema
 #from .UserDBModels import UserDBModel, get_user_by_email, add_user, UserDB
 from utils.security import create_access_token, decode_access_token, hash_password, verify_password
 from db.DBModels import CandidateDBModel, UserDBModel, VoteDBModel 

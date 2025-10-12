@@ -27,3 +27,9 @@ class CandidateSchema(BaseModel):
 
 class VotingSchema(BaseModel):
     candidate_id: int
+
+
+class VoteCountResponseSchema(BaseModel):
+    candidate_id: int
+    candidate_name: str
+    vote_count: int
