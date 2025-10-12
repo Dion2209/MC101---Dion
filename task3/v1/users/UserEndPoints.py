@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header, status, Request, Depends
+from fastapi import APIRouter, HTTPException, Header, status, Request, Depends, Path
 from sqlalchemy import func
 from config import Settings
 from utils.constants import Endpoints, ResponseMessages
@@ -60,12 +60,12 @@ def login_user(user: UserLoginSchema, db=Depends(get_db)):
     return {"message": ResponseMessages.LOGIN_SUCCESS, "token": token, "authentication_type": "later"}
 
 
-"""
+
 @UserRouter.get(Endpoints.USER_INFO)
 def get_user_info(token = Depends(decode_access_token)):
     print(token)
     return{"message": "User info endpoint"}
-"""
+
 
 """
 @UserRouter.delete(Endpoints.DELETE, status_code=status.HTTP_200_OK)
@@ -161,3 +161,20 @@ def delete_candidate(candidate_name: str, db=Depends(get_db)):
     db.delete(candidate)
     db.commit()
     return {"message": f"Candidate '{candidate_name}' deleted successfully"}
+
+
+@AdminRouter.get("/candidate/{candidate_id}/votes", response_model=VoteCountResponseSchema, dependencies=[Depends(admin_auth)])
+def get_candidate_vote_count(candidate_id: int = Path(..., description="ID of the candidate"), db=Depends(get_db)): #I used path for the info from the url
+    # Does candidate exist
+    candidate = db.query(CandidateDBModel).filter(CandidateDBModel.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    # Votes for candidate
+    vote_count = db.query(VoteDBModel).filter(VoteDBModel.candidate_id == candidate_id).count()
+
+    return VoteCountResponseSchema(
+        candidate_id=candidate.id,
+        candidate_name=candidate.name,
+        vote_count=vote_count
+    )
